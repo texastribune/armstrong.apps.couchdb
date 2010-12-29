@@ -1,3 +1,10 @@
+# This file is the work horse of ``armstrong.apps.couchdb``.  It
+# provides the three views to be used throughout.  This file is subject
+# to the license information that can be found at its original
+# [repository](https://github.com/texastribune/armstrong.apps.couchdb/).
+
+# Before we start, we have to load the required Django modules and
+# [httplib2](http://code.google.com/p/httplib2/).
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.http import HttpResponse, Http404
@@ -6,6 +13,14 @@ from django.template import RequestContext
 from django.utils import simplejson as json
 import httplib2
 
+# ``build_url`` provides a function to abstract the generation of a URL
+# to send to CouchDB.  The ``couch_url`` and ``design_doc`` might be
+# require talking to Django's settings to determine whether they should
+# run.
+#
+# One the chance that a value has not been supplied to one of the values
+# and no default settings can be located it raises an
+# ``ImproperlyConfigured``.
 def build_url(type, name, couch_url=None, design_doc=None):
     # This checks to see if a ``couch_url`` was provided.  If not, grab
     # the ``COUCH_DEFAULT_URL`` from settings and use it.  On the off
