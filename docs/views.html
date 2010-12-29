@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="content-type" content="text/html;charset=utf-8">
+  <title>views.py</title>
+  <link rel="stylesheet" href="pycco.css">
+</head>
+<body>
+<div id='container'>
+  <div id="background"></div>
+  
+  <table cellspacing=0 cellpadding=0>
+  <thead>
+    <tr>
+      <th class=docs><h1>views.py</h1></th>
+      <th class=code></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr id='section-0'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-0">#</a>
+        </div>
+        <p>This file is the work horse of <code>armstrong.apps.couchdb</code>.  It
+provides the three views to be used throughout.  This file is subject
+to the license information that can be found at its original
+<a href="https://github.com/texastribune/armstrong.apps.couchdb/">repository</a>.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-1'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-1">#</a>
+        </div>
+        <p>Before we start, we have to load the required Django modules and
+<a href="http://code.google.com/p/httplib2/">httplib2</a>.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre><span class="kn">from</span> <span class="nn">django.conf</span> <span class="kn">import</span> <span class="n">settings</span>
+<span class="kn">from</span> <span class="nn">django.core.exceptions</span> <span class="kn">import</span> <span class="n">ImproperlyConfigured</span>
+<span class="kn">from</span> <span class="nn">django.http</span> <span class="kn">import</span> <span class="n">HttpResponse</span><span class="p">,</span> <span class="n">Http404</span>
+<span class="kn">from</span> <span class="nn">django.shortcuts</span> <span class="kn">import</span> <span class="n">render_to_response</span>
+<span class="kn">from</span> <span class="nn">django.template</span> <span class="kn">import</span> <span class="n">RequestContext</span>
+<span class="kn">from</span> <span class="nn">django.utils</span> <span class="kn">import</span> <span class="n">simplejson</span> <span class="k">as</span> <span class="n">json</span>
+<span class="kn">import</span> <span class="nn">httplib2</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-2'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-2">#</a>
+        </div>
+        <p><code>build_url</code> provides a function to abstract the generation of a URL
+to send to CouchDB.  The <code>couch_url</code> and <code>design_doc</code> might be
+require talking to Django's settings to determine whether they should
+run.</p>
+<p>One the chance that a value has not been supplied to one of the values
+and no default settings can be located it raises an
+<code>ImproperlyConfigured</code>.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre><span class="k">def</span> <span class="nf">build_url</span><span class="p">(</span><span class="nb">type</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">couch_url</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">design_doc</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-3'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-3">#</a>
+        </div>
+        <p>This checks to see if a <code>couch_url</code> was provided.  If not, grab
+the <code>COUCH_DEFAULT_URL</code> from settings and use it.  On the off
+chance that we were not explicitly provided with a <code>couch_url</code>
+and there is not configured default we raise the
+<code>django.core.exceptions.ImproperlyConfigured</code> exception
+explaining the issue to our unfortunate developer.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="k">if</span> <span class="ow">not</span> <span class="n">couch_url</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">settings</span><span class="p">,</span> <span class="s">&#39;COUCH_DEFAULT_URL&#39;</span><span class="p">):</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s">&quot;Please either explicitly provide a couch_url or add COUCH_DEFAULT_URL to your settings&quot;</span>
+            <span class="k">raise</span> <span class="n">ImproperlyConfigured</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+        <span class="n">couch_url</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">COUCH_DEFAULT_URL</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-4'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-4">#</a>
+        </div>
+        <p>Once we have a </p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="k">if</span> <span class="n">couch_url</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&quot;/&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+        <span class="n">couch_url</span> <span class="o">=</span> <span class="s">&quot;http://127.0.0.1:5984/</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">couch_url</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-5'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-5">#</a>
+        </div>
+        <p>Use the configured <code>COUCH_DEFAULT_DESIGN_DOC</code> when no
+<code>design_doc</code> has been provided.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="k">if</span> <span class="ow">not</span> <span class="n">design_doc</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">settings</span><span class="p">,</span> <span class="s">&quot;COUCH_DEFAULT_DESIGN_DOC&quot;</span><span class="p">):</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s">&quot;Missing design_doc or settings.COUCH_DEFAULT_DESIGN_DOC&quot;</span>
+            <span class="k">raise</span> <span class="n">ImproperlyConfigured</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="n">design_doc</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">COUCH_DEFAULT_DESIGN_DOC</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-6'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-6">#</a>
+        </div>
+        <p>Once we have a design document, either from being explicitly
+provided or being extracted from settings, we check it to see if
+it contains a slash and append <code>_design/</code> if one isn't present.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="k">if</span> <span class="n">design_doc</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&quot;/&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+        <span class="n">design_doc</span> <span class="o">=</span> <span class="s">&quot;_design/</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">design_doc</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-7'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-7">#</a>
+        </div>
+        <p>The various type of design documents need to be prefixed with an
+underscore.  We now add the <code>_</code> if it is not already there.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="nb">type</span> <span class="o">=</span> <span class="nb">type</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s">&quot;_&quot;</span> <span class="ow">and</span> <span class="nb">type</span> <span class="ow">or</span> <span class="s">&quot;_</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">type</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-8'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-8">#</a>
+        </div>
+        <p>Finally, we join all of the values we have together, separating
+them by a forward slash and then return it.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="k">return</span> <span class="s">&quot;/&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">((</span><span class="n">couch_url</span><span class="p">,</span> <span class="n">design_doc</span><span class="p">,</span> <span class="nb">type</span><span class="p">,</span> <span class="n">name</span><span class="p">))</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-9'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-9">#</a>
+        </div>
+        
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre><span class="k">def</span> <span class="nf">raw_request</span><span class="p">(</span><span class="nb">type</span><span class="p">):</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-10'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-10">#</a>
+        </div>
+        <p>Create an <code>http</code> variable to be used by <code>actual_view</code> when
+making requests.  It is done here to avoid having to re-create it
+on each request, while still keeping it out of the module level.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="n">http</span> <span class="o">=</span> <span class="n">httplib2</span><span class="o">.</span><span class="n">Http</span><span class="p">()</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-11'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-11">#</a>
+        </div>
+        <p>Here we define the view that is going to be executed by Django.
+This receives Django's <code>request</code> parameter first, then all of
+the variables that are passed in via the view.  The only value
+that is explicitly required as part of the view is the <code>name</code>.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="k">def</span> <span class="nf">actual_view</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">couch_url</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">design_doc</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">template_name</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">relay_params</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-12'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-12">#</a>
+        </div>
+        <p>Delegate to <code>build_url</code> to determine the full URL that
+should be requested.  Note that <code>couch_url</code> and
+<code>design_doc</code> may be <code>None</code>.  At this point, that is ok as
+<code>build_url</code> will fill them in with their correct values or
+raise the appropriate exception if it can not determine their
+value.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>        <span class="n">url</span> <span class="o">=</span> <span class="n">build_url</span><span class="p">(</span><span class="nb">type</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">couch_url</span><span class="p">,</span> <span class="n">design_doc</span><span class="p">)</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-13'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-13">#</a>
+        </div>
+        <p>By default, we do not pass the GET parameters to the CouchDB
+view, but it can be useful to.  If the <code>relay_params</code> is set
+to <code>True</code> we add them to the value.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>        <span class="k">if</span> <span class="n">relay_params</span><span class="p">:</span>
+            <span class="n">url</span> <span class="o">=</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s">?</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">request</span><span class="o">.</span><span class="n">META</span><span class="p">[</span><span class="s">&#39;QUERY_STRING&#39;</span><span class="p">])</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-14'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-14">#</a>
+        </div>
+        <p>Now send the request.  All requests to CouchDB via this are
+done as <code>GET</code> requests.  It might make sense to support
+other types of requests in the future, but for now we're
+keeping it simple (stupid).</p>
+<p>The response from <code>request</code> is a tuple.  The first value is
+a dict-like object containing the response values, the second
+is the raw body that was sent.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>        <span class="n">response</span><span class="p">,</span> <span class="n">body</span> <span class="o">=</span> <span class="n">http</span><span class="o">.</span><span class="n">request</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="s">&quot;GET&quot;</span><span class="p">)</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-15'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-15">#</a>
+        </div>
+        <p>Now we need to process the response.  First we check to see if
+this was a valid response.  Anything that is not a <code>200</code> is
+treated as an error state and the appropriate response is
+generated and returned to the client.</p>
+<p>Special care is taken with 404 responses and Django deviates
+with those and expects a <code>django.http.Http404</code> exception to
+be raised to trigger the default 404 handling.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>        <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status</span> <span class="o">!=</span> <span class="mi">200</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="mi">404</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">Http404</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">HttpResponse</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="n">response</span><span class="o">.</span><span class="n">status</span><span class="p">)</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-16'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-16">#</a>
+        </div>
+        <p>We finally have a valid response from Couch.  Before we can
+hand it off to Django's template engine and render the
+results, we need to check its type and determine what to do
+with it.</p>
+<p>CouchDB returns <code>text/plain</code> as its Content-Type when
+returning JSON so we will assume that response type.  It is
+the CouchDB designer's responsibility to set a proper
+Content-Type when creating a show that do not emit JSON.</p>
+<p>Here we attempt to load the JSON string into its Python
+equivalent.  We swallow all <code>ValueError</code> exceptions that are
+generated because we're unable to parse the body.  This
+assumes that errors parsing are due to a non-JSON response
+that still returns <code>text/plain</code>.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>        <span class="k">if</span> <span class="n">response</span><span class="p">[</span><span class="s">&quot;content-type&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;;&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s">&quot;text/plain&quot;</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">body</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">body</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">message</span> <span class="o">!=</span> <span class="s">&quot;No JSON object could be decoded&quot;</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">e</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-17'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-17">#</a>
+        </div>
+        <p>The final pieces of setup required is to set the
+<code>template_name</code> if needed.  This can be passed to the view
+via a variable inside the <code>urls</code> setup, but when it is
+absent we default to <code>armstrong/apps/couchdb/&lt;view&gt;.html</code>.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>        <span class="k">if</span> <span class="ow">not</span> <span class="n">template_name</span><span class="p">:</span>
+            <span class="n">template_name</span> <span class="o">=</span> <span class="s">&quot;armstrong/apps/couchdb/</span><span class="si">%s</span><span class="s">.html&quot;</span> <span class="o">%</span> <span class="nb">type</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-18'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-18">#</a>
+        </div>
+        <p>Now we're ready to render and return a response.  This adds a
+<code>RequestContext</code> so all context processors are available
+inside the template.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>        <span class="n">context</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;response&quot;</span><span class="p">:</span> <span class="n">response</span><span class="p">,</span> <span class="s">&quot;body&quot;</span><span class="p">:</span> <span class="n">body</span><span class="p">}</span>
+        <span class="k">return</span> <span class="n">render_to_response</span><span class="p">(</span><span class="n">template_name</span><span class="p">,</span> <span class="n">context</span><span class="p">,</span>
+                                  <span class="n">context_instance</span><span class="o">=</span><span class="n">RequestContext</span><span class="p">(</span><span class="n">request</span><span class="p">))</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-19'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-19">#</a>
+        </div>
+        <p>Now that the <code>actual_view</code> is defined, it's time to return it to
+be used throughout.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="k">return</span> <span class="n">actual_view</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-20'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-20">#</a>
+        </div>
+        <p>Define the three views that are available to be used.  Each variable
+is equal to the <code>actual_view</code> function defined inside
+<code>raw_request</code>.  This style of enclosure allows us to share state
+through closures rather than objects.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre><span class="nb">list</span> <span class="o">=</span> <span class="n">raw_request</span><span class="p">(</span><span class="s">&#39;list&#39;</span><span class="p">)</span>
+<span class="n">show</span> <span class="o">=</span> <span class="n">raw_request</span><span class="p">(</span><span class="s">&#39;show&#39;</span><span class="p">)</span>
+<span class="n">view</span> <span class="o">=</span> <span class="n">raw_request</span><span class="p">(</span><span class="s">&#39;view&#39;</span><span class="p">)</span>
+
+</pre></div></pre></div>
+      </td>
+    </tr>
+  </table>
+</div>
+</body>
