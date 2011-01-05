@@ -71,7 +71,8 @@ def raw_request(type):
     # This receives Django's ``request`` parameter first, then all of
     # the variables that are passed in via the view.  The only value
     # that is explicitly required as part of the view is the ``name``.
-    def actual_view(request, name, couch_url=None, design_doc=None, template_name=None, relay_params=False):
+    def actual_view(request, name, couch_url=None, design_doc=None,
+                    template_name=None, relay_params=False, extra_context={}):
         # Delegate to ``build_url`` to determine the full URL that
         # should be requested.  Note that ``couch_url`` and
         # ``design_doc`` may be ``None``.  At this point, that is ok as
@@ -138,10 +139,16 @@ def raw_request(type):
         if not template_name:
             template_name = "armstrong/apps/couchdb/%s.html" % type
 
+        # Prepare the ``context`` to provide to the template.  We start
+        # off using the ``extra_context`` provided to the view, then
+        # update that with the ``response`` and ``body`` that we're
+        # supplying as part of the response from CouchDB.
+        context = extra_context
+        context.update({"response": response, "body": body})
+
         # Now we're ready to render and return a response.  This adds a
         # ``RequestContext`` so all context processors are available
         # inside the template.
-        context = {"response": response, "body": body}
         return render_to_response(template_name, context,
                                   context_instance=RequestContext(request))
 
