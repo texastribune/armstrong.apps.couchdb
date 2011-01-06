@@ -12,6 +12,7 @@ from django.shortcuts import render_to_response
 from django.template import RequestContext
 from django.utils import simplejson as json
 import httplib2
+import urllib
 
 # ``build_url`` provides a function to abstract the generation of a URL
 # to send to CouchDB.  The ``couch_url`` and ``design_doc`` might be
@@ -72,7 +73,8 @@ def raw_request(type):
     # the variables that are passed in via the view.  The only value
     # that is explicitly required as part of the view is the ``name``.
     def actual_view(request, name, couch_url=None, design_doc=None,
-                    template_name=None, relay_params=False, extra_context={}):
+                    template_name=None, relay_params=False,
+                    extra_params={}, extra_context={}):
         # Delegate to ``build_url`` to determine the full URL that
         # should be requested.  Note that ``couch_url`` and
         # ``design_doc`` may be ``None``.  At this point, that is ok as
@@ -83,9 +85,16 @@ def raw_request(type):
 
         # By default, we do not pass the GET parameters to the CouchDB
         # view, but it can be useful to.  If the ``relay_params`` is set
-        # to ``True`` we add them to the value.
+        # to ``True`` we add them to the url.
         if relay_params:
             url = "%s?%s" % (url, request.META['QUERY_STRING'])
+
+        # If any ``extra_params`` have been provided, now we add them to
+        # the url, separating them by a & or ?, depending on the value
+        # of ``relay_params``
+        if extra_params:
+            url = "%s%s%s" % (url, "&" if relay_params else "?",
+                    urllib.urlencode(extra_params))
 
         # Now send the request.  All requests to CouchDB via this are
         # done as ``GET`` requests.  It might make sense to support
