@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='armstrong.apps.couchdb',
-    version='0.1',
+    version='0.1.1',
     description='Provides a few generic views for wrapping calls to CouchDB',
     author='Texas Tribune',
     author_email='tech@texastribune.org',
@@ -12,7 +12,9 @@ setup(
         'armstrong.apps',
         'armstrong.apps.couchdb',
     ],
-
+    namespace_packages=[
+        "armstrong",
+    ],
     install_requires=[
         'setuptools',
     ],
